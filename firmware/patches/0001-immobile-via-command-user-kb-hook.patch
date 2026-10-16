@@ -1,0 +1,28 @@
+--- a/keyboards/multimode/immobile/immobile.c
++++ b/keyboards/multimode/immobile/immobile.c
+@@ -1848,6 +1848,14 @@
+ #    include "via.h"
+ #    include "raw_hid.h"
+ 
++// Extension hook: keyboard-level raw HID consumers (e.g. the music
++// visualizer) can claim reports the framework itself does not handle.
++__WEAK bool via_command_user_kb(uint8_t *data, uint8_t length) {
++    (void)data;
++    (void)length;
++    return false;
++}
++
+ bool via_command_user(uint8_t *data, uint8_t length) {
+     uint8_t *command_id   = &(data[0]);
+     uint8_t *command_data = &(data[1]);
+@@ -1868,6 +1876,10 @@
+             reset_settings_flag = true;
+         } break;
+         default: {
++            if (via_command_user_kb(data, length)) {
++                // Consumed by keyboard-level code; no reply needed.
++                return true;
++            }
+             retval = false;
+         } break;
+     }

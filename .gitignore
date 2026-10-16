@@ -1,0 +1,14 @@
+# local build tree + toolchain - recreate with firmware/setup.sh
+/qmk-firmware/
+/tools/
+
+# python
+musicviz-host/.venv/
+__pycache__/
+*.pyc
+
+# editors / OS noise
+.vscode/
+.idea/
+Thumbs.db
+desktop.ini

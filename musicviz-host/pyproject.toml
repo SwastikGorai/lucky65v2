@@ -1,0 +1,10 @@
+[project]
+name = "musicviz-host"
+version = "0.1.0"
+description = "Host streamer for the lucky65 music visualizer: WASAPI loopback -> FFT -> raw HID"
+requires-python = ">=3.10"
+dependencies = [
+    "numpy>=1.24",
+    "soundcard>=0.4.3",
+    "hidapi>=0.14.0",
+]
