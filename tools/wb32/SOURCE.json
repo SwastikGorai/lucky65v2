@@ -1,0 +1,9 @@
+{
+  "package": "https://mirror.msys2.org/mingw/mingw64/mingw-w64-x86_64-wb32-dfu-updater-1.0.0-1-any.pkg.tar.zst",
+  "sha256": "a34e9e24056ea9d4ef3712818c79f79a2a4a7fae12758ca2ba511bda1c44b9ef",
+  "libusb_source": "MSYS2 mingw-w64-x86_64-libusb package: https://packages.msys2.org/packages/mingw-w64-x86_64-libusb",
+  "files_sha256": {
+    "libusb-1.0.dll": "d439b7b6bf3bcf1defd3651e6d062513886cf13d25a2a4731e7654eb44419f35",
+    "wb32-dfu-updater_cli.exe": "6b47592a770607143ffb640f41e90aa0b16e9d2623d92857f8c4a53919c91f5b"
+  }
+}

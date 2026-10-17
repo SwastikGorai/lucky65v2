@@ -9,7 +9,10 @@ them to the keyboard over raw HID at ~60 fps. Windows-first, nothing exotic.
 For the standalone desktop GUI, build from the repository root with
 `.\musicviz-host\build-desktop.ps1`, then run
 `build\desktop\release\Lucky65Music.exe`. The EXE bundles Python and its
-dependencies; recipients do not need uv or Python installed. For source-based
+dependencies; recipients do not need uv or Python installed. Install uv using
+the source installation steps below only if rebuilding. The ready-to-use EXE
+and modified firmware are included at the paths documented in the main README.
+For source-based
 GUI development, run `uv run --locked python musicviz_gui.py` from this directory.
 Use `--demo` to try the controls without audio or keyboard hardware.
 
@@ -17,7 +20,7 @@ The window closes to a tray icon with Open, Pause/Resume, and Quit. Optional
 **Start with Windows** launches in the tray at sign-in and is available in the
 packaged EXE. Preferences save automatically under `%LOCALAPPDATA%\Lucky65Music`;
 keyboard lighting remains controlled by the current board settings until changed
-in the GUI. See the [desktop guide](../README.md#standalone-windows-app).
+in the GUI. See the [desktop guide](../docs/technical-guide.md#standalone-windows-app).
 
 ### Source installation
 
@@ -56,8 +59,10 @@ quiet audio brighter; it does not change the keyboard's key actuation.
 The meter shows outgoing audio levels. Hardware settings refresh four times
 per second, including changes made with the keyboard shortcuts.
 
-Flash the newly built `build/firmware/modified/lucky65v2_via.bin` for color drift
-and live keyboard controls, then connect in USB mode. In either music effect,
+For color drift and live keyboard controls, first follow the
+[firmware build and flash instructions](../README.md#quick-start-windows), then
+connect in USB mode. Firmware paths in those instructions are relative to the
+repository root. In either music effect,
 **Fn + Enter** cycles red → yellow → green → cyan → blue → pink → white →
 **color drift** → red. Drift takes 12 seconds around the hue wheel; audio still
 controls brightness. Normal RGB effects keep their existing color cycle.
@@ -73,7 +78,7 @@ Try the complete panel without hardware or audio:
 
 ```powershell
 .\run-musicviz.cmd --tui --dry-run --selftest
-uv run python -m unittest test_tui
+uv run --locked python -m unittest test_tui
 ```
 
 ### Live control protocol
@@ -90,12 +95,12 @@ include the HID report-ID byte 0 before the 32-byte payload.
 ### Command-line use
 
 ```powershell
-run-musicviz.cmd --list-devices     # show output devices
-run-musicviz.cmd                    # stream (default output device loopback)
-run-musicviz.cmd --preview          # also draw bars in the console
-run-musicviz.cmd --device Speakers  # capture a specific device by substring
-run-musicviz.cmd --selftest         # no audio: synthetic pattern to the board
-run-musicviz.cmd --dry-run --preview  # audio only, no keyboard needed
+.\run-musicviz.cmd --list-devices     # show output devices
+.\run-musicviz.cmd                    # stream (default output device loopback)
+.\run-musicviz.cmd --preview          # also draw bars in the console
+.\run-musicviz.cmd --device Speakers  # capture a specific device by substring
+.\run-musicviz.cmd --selftest         # no audio: synthetic pattern to the board
+.\run-musicviz.cmd --dry-run --preview  # audio only, no keyboard needed
 ```
 
 Put the keyboard in a visualizer mode first: hold **Fn + Right Ctrl**, then
@@ -122,8 +127,8 @@ On exit the app sends a zero-level report so the effect fades to dark.
 No hardware needed:
 
 ```powershell
-uv run python test_analyzer.py
-uv run python -m unittest test_tui
+uv run --locked python test_analyzer.py
+uv run --locked python -m unittest discover -p 'test_*.py'
 ```
 
 Feeds the analyzer synthetic tones (100 Hz / 1 kHz / 8 kHz), silence and a
@@ -131,7 +136,10 @@ very quiet signal, and checks the right bands light up and the AGC behaves.
 
 ## Autostart (optional)
 
-Drop a shortcut to `run-musicviz.cmd` into `shell:startup`.
+For the packaged GUI, enable **Start with Windows** in the app. For the TUI,
+you can instead put a shortcut to `run-musicviz.cmd --tui` in `shell:startup`;
+this requires uv and the source checkout to remain available. Choose one startup
+method to avoid duplicate streamers.
 
 ## Troubleshooting
 

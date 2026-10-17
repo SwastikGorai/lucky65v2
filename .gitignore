@@ -1,7 +1,24 @@
 # local build tree + toolchain - recreate with firmware/setup.sh
 /qmk-firmware/
-/tools/
-/build/
+/tools/*
+!/tools/wb32/
+/tools/wb32/*
+!/tools/wb32/wb32-dfu-updater_cli.exe
+!/tools/wb32/libusb-1.0.dll
+!/tools/wb32/LICENSE-updater.txt
+!/tools/wb32/LICENSE-libusb.txt
+!/tools/wb32/SOURCE.json
+/build/*
+!/build/desktop/
+/build/desktop/*
+!/build/desktop/release/
+/build/desktop/release/*
+!/build/desktop/release/Lucky65Music.exe
+!/build/firmware/
+/build/firmware/*
+!/build/firmware/modified/
+/build/firmware/modified/*
+!/build/firmware/modified/lucky65v2_via.bin
 
 # python
 musicviz-host/.venv/
