@@ -8,4 +8,11 @@ dependencies = [
     "soundcard>=0.4.3",
     "hidapi>=0.14.0",
     "textual>=8.2.8",
+    "pystray>=0.19.5",
+    "pillow>=12.3.0",
+]
+
+[dependency-groups]
+build = [
+    "pyinstaller>=6.22.3",
 ]

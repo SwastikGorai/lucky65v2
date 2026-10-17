@@ -6,6 +6,21 @@ them to the keyboard over raw HID at ~60 fps. Windows-first, nothing exotic.
 
 ## Install
 
+For the standalone desktop GUI, build from the repository root with
+`.\musicviz-host\build-desktop.ps1`, then run
+`build\desktop\release\Lucky65Music.exe`. The EXE bundles Python and its
+dependencies; recipients do not need uv or Python installed. For source-based
+GUI development, run `uv run --locked python musicviz_gui.py` from this directory.
+Use `--demo` to try the controls without audio or keyboard hardware.
+
+The window closes to a tray icon with Open, Pause/Resume, and Quit. Optional
+**Start with Windows** launches in the tray at sign-in and is available in the
+packaged EXE. Preferences save automatically under `%LOCALAPPDATA%\Lucky65Music`;
+keyboard lighting remains controlled by the current board settings until changed
+in the GUI. See the [desktop guide](../README.md#standalone-windows-app).
+
+### Source installation
+
 Install [uv](https://docs.astral.sh/uv/getting-started/installation/) first:
 `winget install --id astral-sh.uv -e` on Windows, then open a new terminal.
 Run the following from `musicviz-host` (use `cd musicviz-host` from the repo root).

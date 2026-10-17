@@ -87,7 +87,8 @@ class HidStreamer:
                 if best is None:
                     best = d
         if best is None:
-            best = infos[0]
+            self.log("[hid] VIA raw HID interface not found; connect in USB mode")
+            return False
         path = best.get("path")
 
         try:
@@ -113,17 +114,19 @@ class HidStreamer:
                 if n <= 0:
                     raise OSError("short write")
             else:
-                self.dev.write(payload)
+                if self.dev.write(payload) <= 0:
+                    raise OSError("short write")
         except Exception:
             if self.prefix:  # retry without report-id prefix, then lock it in
                 try:
-                    self.dev.write(payload)
+                    if self.dev.write(payload) <= 0:
+                        raise OSError("short write")
                     self.prefix = False
                     self.log("[hid] switched to prefix-less writes")
                 except Exception as exc:
-                    self.log(f"[hid] write failed: {exc}")
+                    raise OSError(f"Keyboard disconnected: {exc}") from exc
             else:
-                self.log("[hid] write failed")
+                raise OSError("Keyboard write failed")
 
     def send(self, bands):
         if self.dry_run:
@@ -404,7 +407,13 @@ def run_stream(args, panel=None):
             hid_streamer.close()
             return 1
         capture = LoopbackCapture(args.device, args.rate, log=log)
-        if not capture.open():
+        try:
+            opened = capture.open()
+        except Exception:
+            capture.close()
+            hid_streamer.close()
+            raise
+        if not opened:
             capture.close()
             hid_streamer.close()
             return 1
@@ -451,6 +460,8 @@ def run_stream(args, panel=None):
                 panel.levels = levels.copy()
 
             hid_streamer.send(levels[:bands_n])
+            if panel:
+                panel.last_audio_at = now
             frames += 1
 
             if args.preview and not panel:

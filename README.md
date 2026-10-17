@@ -24,7 +24,53 @@ height; higher levels are clamped. Silence and a 500 ms stream timeout fade to
 dark. Caps Lock, battery/wireless indicators and the LED probe retain their
 existing behavior and may overlay the music effect.
 
-## Build from PowerShell
+## Standalone Windows app
+
+Build the portable GUI on Windows x64 from the repo root:
+
+```powershell
+.\musicviz-host\build-desktop.ps1
+```
+
+The output is `build/desktop/release/Lucky65Music.exe`. Double-click it to open
+the desktop controls and begin streaming. Python, uv, and this repository are
+needed only for building; users can copy and run the single EXE. Connect the
+keyboard in USB mode with the updated firmware already flashed.
+
+The GUI uses a neubrutalist layout with bold borders, offset shadows, and flat
+colors. It provides effect/color selection, sensitivity, brightness, auto gain,
+pause/resume, output-device selection, and a minimalist 67-key Lucky65 lighting
+preview. It mirrors Breathing or Bottom-up bar using outgoing audio and the
+keyboard's reported color, brightness, and RGB state, with the firmware's
+40 ms attack / 180 ms release smoothing. The preview refreshes around 30 fps.
+It is a host-side estimate, not LED telemetry: drift phase, physical LED mapping,
+and status indicators can differ. Custom VIA colors and non-music RGB effects
+are labeled as unavailable rather than guessed. Select a music effect
+to enable music lighting. Host preferences save automatically; keyboard lighting
+is read from the board rather than overwritten at startup. Closing the window
+hides it to the tray; use the tray menu to reopen, pause, or quit.
+
+**Start with Windows** is off by default. Enable it in the GUI to launch in the
+tray at sign-in. Keep the EXE at a stable location; after moving it, disable and
+re-enable the checkbox. Disable startup before deleting the app. Startup uses
+the current user's registry entry and requires no administrator privileges.
+
+Settings and rotating diagnostic logs live in `%LOCALAPPDATA%\Lucky65Music`.
+Invalid settings use safe defaults and require **Save preferences** before the
+file is replaced. The app retries unavailable devices every two seconds.
+No audio recordings are saved. Close VIA while using live keyboard controls.
+
+Run `Lucky65Music.exe --demo` for synthetic lighting controls without hardware.
+`--smoke-test` performs a short hidden demo and exits. The executable is unsigned;
+Windows may show a reputation warning. First launch extracts its bundled runtime
+to a temporary directory. Clean-machine and physical-keyboard validation remain
+outstanding; development-machine packaging and audio checks are recorded in the
+[standalone plan](docs/standalone/PLAN.md).
+
+For a diagnostic folder build, use `build-desktop.ps1 -Folder`. Build outputs,
+including collected license notices, remain under the ignored `build/` directory.
+
+## Firmware build from PowerShell
 
 Install [uv](https://docs.astral.sh/uv/getting-started/installation/) for the
 Python host. On Windows, you can use `winget install --id astral-sh.uv -e`, then
