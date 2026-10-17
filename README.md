@@ -4,6 +4,8 @@ Audio-reactive lighting for the **Weikav Lucky65 V2**, with a standalone Windows
 
 ![Lucky65 Music desktop app with live keyboard lighting preview](docs/images/lucky65-music.png)
 
+[![Lucky65 lighting showcase — click for the original video](docs/images/showcase.gif)](docs/images/vid.mp4)
+
 ## Features
 
 - **Breathing** — all keys brighten and dim with your audio.
