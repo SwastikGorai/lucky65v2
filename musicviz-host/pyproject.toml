@@ -7,4 +7,5 @@ dependencies = [
     "numpy>=1.24",
     "soundcard>=0.4.3",
     "hidapi>=0.14.0",
+    "textual>=8.2.8",
 ]

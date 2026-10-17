@@ -6,12 +6,20 @@ them to the keyboard over raw HID at ~60 fps. Windows-first, nothing exotic.
 
 ## Install
 
+Install [uv](https://docs.astral.sh/uv/getting-started/installation/) first:
+`winget install --id astral-sh.uv -e` on Windows, then open a new terminal.
+Run the following from `musicviz-host` (use `cd musicviz-host` from the repo root).
+
 ```powershell
-uv sync
+uv sync --locked
 ```
 
 That's it — uv creates the venv (fetching python 3.12 per `.python-version`
 if you don't have it) and installs exactly what's in `uv.lock`.
+The launcher also uses `uv run --locked` to keep dependency versions fixed.
+No separate pip install or virtual-environment activation is needed. To add a
+dependency deliberately, run `uv add PACKAGE` here and commit `pyproject.toml`
+and `uv.lock` together.
 
 Audio capture uses [`soundcard`](https://pypi.org/project/soundcard/) for the
 WASAPI loopback — pure ctypes, no PortAudio wrestling. Heads-up if you have
@@ -19,6 +27,52 @@ MSYS2's python on PATH: it makes venvs with a POSIX layout (`bin/` instead of
 `Scripts/`) that won't run from PowerShell. uv sidesteps all of that.
 
 ## Use
+
+For the local terminal panel, run from this directory:
+
+```powershell
+.\run-musicviz.cmd --tui
+```
+
+Use the buttons (mouse or Tab/Enter) to adjust sensitivity (0.1–4×), auto gain,
+Breathing/Bottom-up bar, color, brightness, and pause while audio is playing.
+`+`/`-` adjust sensitivity, Space pauses, and Q quits. Higher sensitivity makes
+quiet audio brighter; it does not change the keyboard's key actuation.
+The meter shows outgoing audio levels. Hardware settings refresh four times
+per second, including changes made with the keyboard shortcuts.
+
+Flash the newly built `build/firmware/modified/lucky65v2_via.bin` for color drift
+and live keyboard controls, then connect in USB mode. In either music effect,
+**Fn + Enter** cycles red → yellow → green → cyan → blue → pink → white →
+**color drift** → red. Drift takes 12 seconds around the hue wheel; audio still
+controls brightness. Normal RGB effects keep their existing color cycle.
+
+TUI adjustments are temporary (no EEPROM writes); sensitivity/auto gain reset
+when the host restarts, and keyboard settings reset when the board restarts.
+Drift selected from the keyboard also resets on reboot. Use `--gain 1.5` to
+choose a starting sensitivity. Close VIA while using this raw HID controller.
+If controls receive no reply, the panel disables the keyboard buttons and
+shows a USB/firmware hint. After a stream error, quit and restart the app.
+
+Try the complete panel without hardware or audio:
+
+```powershell
+.\run-musicviz.cmd --tui --dry-run --selftest
+uv run python -m unittest test_tui
+```
+
+### Live control protocol
+
+The existing 32-byte audio reports are unchanged. Control requests use
+`[0x4E, 1, command, value, ...zero padding]`. Command 0 reads state, 1 selects
+effect (1 breathing, 2 bar, also enables RGB), 2 selects color (0–6 presets,
+7 drift), and 3 sets brightness (0–200). Valid requests receive
+`[0x4E, 1, 0x80, effect, color, brightness, enabled, ...zero padding]`.
+Effect 0 means another RGB effect; color 8 means a custom VIA color. Invalid
+requests are consumed without changing settings or replying. Host writes
+include the HID report-ID byte 0 before the 32-byte payload.
+
+### Command-line use
 
 ```powershell
 run-musicviz.cmd --list-devices     # show output devices
@@ -29,8 +83,9 @@ run-musicviz.cmd --selftest         # no audio: synthetic pattern to the board
 run-musicviz.cmd --dry-run --preview  # audio only, no keyboard needed
 ```
 
-Put the keyboard in a visualizer mode first (**Fn + Del**, or cycle with
-RGB_MOD) — the effect renders whatever the host sends.
+Put the keyboard in a visualizer mode first: hold **Fn + Right Ctrl**, then
+press **`\`**. This toggles Breathing and Vertical Bar. Both use the strongest
+received band; Fn + `\` alone continues cycling normal RGB effects.
 
 | flag            | meaning                                                      |
 |-----------------|--------------------------------------------------------------|
@@ -41,10 +96,11 @@ RGB_MOD) — the effect renders whatever the host sends.
 | `--no-agc`      | disable the automatic loudness normalisation                 |
 | `--tilt DB`     | high-frequency tilt, default 6 dB, `0` disables              |
 | `--preview`     | console bar display                                          |
+| `--tui`         | interactive terminal controls and live audio meter           |
 | `--dry-run`     | skip the keyboard, useful with `--preview`                   |
 | `--duration S`  | stop after S seconds (0 = run until Ctrl+C)                  |
 
-On exit the app sends a zero-level report so the effect returns to idle.
+On exit the app sends a zero-level report so the effect fades to dark.
 
 ## Sanity check
 
@@ -52,6 +108,7 @@ No hardware needed:
 
 ```powershell
 uv run python test_analyzer.py
+uv run python -m unittest test_tui
 ```
 
 Feeds the analyzer synthetic tones (100 Hz / 1 kHz / 8 kHz), silence and a

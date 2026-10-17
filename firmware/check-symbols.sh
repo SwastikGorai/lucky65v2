@@ -1,15 +1,11 @@
 #!/usr/bin/env bash
-# Verify that a built firmware contains the music visualizer symbols.
-#
-#   bash firmware/check-symbols.sh [path/to/firmware.elf]
 set -euo pipefail
-
-ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-TREE="${QMK_TREE:-$ROOT/qmk-firmware}"
-export PATH="$HOME/tools/gcc-arm-none-eabi-10.3-2021.10/bin:$PATH"
-
-ELF="${1:-$TREE/.build/lucky65v2_via.elf}"
-echo "=== size ==="
+ELF="${1:?Usage: check-symbols.sh firmware.elf}"
 arm-none-eabi-size "$ELF"
-echo "=== mod symbols ==="
-arm-none-eabi-nm "$ELF" | grep -E "music_viz|via_command_user_kb|MV_SPECTRUM|MV_CENTER|MV_PULSE" || echo "NO SYMBOLS FOUND"
+symbols="$(arm-none-eabi-nm --defined-only "$ELF")"
+for name in music_viz_process_hid music_viz_render_breathing music_viz_render_bar music_viz_next_mode via_command_user_kb; do
+    if ! grep -Eq " [Tt] ${name}$" <<< "$symbols"; then
+        echo "Missing required firmware symbol: $name" >&2
+        exit 1
+    fi
+done

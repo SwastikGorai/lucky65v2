@@ -1,9 +1,11 @@
 # local build tree + toolchain - recreate with firmware/setup.sh
 /qmk-firmware/
 /tools/
+/build/
 
 # python
 musicviz-host/.venv/
+firmware/.venv/
 __pycache__/
 *.pyc
 

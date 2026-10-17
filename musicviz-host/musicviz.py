@@ -17,6 +17,7 @@ Usage examples:
     python musicviz.py --preview           # console bars + streaming
     python musicviz.py --selftest          # no audio needed, tests the HID path
     python musicviz.py --dry-run --preview # audio analysis without keyboard
+    python musicviz.py --probe sweep       # light each LED in turn (LED map debugging)
 """
 
 import argparse
@@ -52,22 +53,23 @@ BLOCKS = "▁▂▃▄▅▆▇█"
 class HidStreamer:
     """Sends 32-byte magic reports to the keyboard's VIA raw HID interface."""
 
-    def __init__(self, dry_run=False):
+    def __init__(self, dry_run=False, log=print):
+        self.log = log
         self.dry_run = dry_run
         self.dev = None
         self.prefix = True  # hidapi convention: report id byte first
 
     def open(self):
         if self.dry_run:
-            print("[hid] dry run - reports are not sent")
+            self.log("[hid] dry run - reports are not sent")
             return True
         if hid is None:
-            print("[hid] python package 'hidapi' is not installed.")
-            print("      pip install -r requirements.txt")
+            self.log("[hid] python package 'hidapi' is not installed.")
+            self.log("      Run: uv sync --locked --project musicviz-host (from the repo root)")
             return False
         infos = hid.enumerate(VID, PID)
         if not infos:
-            print(
+            self.log(
                 f"[hid] keyboard not found (VID {VID:04X} PID {PID:04X}).\n"
                 "      Make sure it is connected over USB and set to USB mode\n"
                 "      (BL/2.4G modes do not forward raw HID)."
@@ -95,18 +97,14 @@ class HidStreamer:
                 self.dev = hid.device()
                 self.dev.open_path(path)
         except Exception as exc:
-            print(f"[hid] failed to open raw HID interface: {exc}")
+            self.log(f"[hid] failed to open raw HID interface: {exc}")
             return False
 
         product = best.get("product_string", "")
-        print(f"[hid] opened raw HID interface '{product}' ({path!r})")
+        self.log(f"[hid] opened raw HID interface '{product}' ({path!r})")
         return True
 
-    def send(self, bands):
-        if self.dry_run:
-            return
-        payload = bytes([MAGIC, PROTOCOL_VERSION]) + bytes(int(b) & 0xFF for b in bands)
-        payload += bytes(REPORT_SIZE - len(payload))
+    def _write(self, payload):
         if self.dev is None:
             return
         try:
@@ -121,11 +119,40 @@ class HidStreamer:
                 try:
                     self.dev.write(payload)
                     self.prefix = False
-                    print("[hid] switched to prefix-less writes")
+                    self.log("[hid] switched to prefix-less writes")
                 except Exception as exc:
-                    print(f"[hid] write failed: {exc}")
+                    self.log(f"[hid] write failed: {exc}")
             else:
-                print("[hid] write failed")
+                self.log("[hid] write failed")
+
+    def send(self, bands):
+        if self.dry_run:
+            return
+        payload = bytes([MAGIC, PROTOCOL_VERSION]) + bytes(int(b) & 0xFF for b in bands)
+        payload += bytes(REPORT_SIZE - len(payload))
+        self._write(payload)
+
+    def send_probe(self, index):
+        """Probe command: light a single LED white (0xFF clears)."""
+        if self.dry_run:
+            return
+        payload = bytes([MAGIC, PROTOCOL_VERSION | 0x80, index & 0xFF])
+        payload += bytes(REPORT_SIZE - len(payload))
+        self._write(payload)
+
+    def control(self, command=0, value=0):
+        if not 0 <= command <= 3 or not 0 <= value <= 255:
+            raise ValueError("invalid control command")
+        self._write(bytes([0x4E, 1, command, value]) + bytes(28))
+
+    def read_settings(self):
+        if self.dev is None:
+            return None
+        data = self.dev.read(32, 1)
+        if (len(data) == 32 and list(data[:3]) == [0x4E, 1, 0x80]
+                and data[3] <= 2 and data[4] <= 8 and data[5] <= 200 and data[6] <= 1):
+            return tuple(data[3:7])
+        return None
 
     def close(self):
         if self.dev is not None:
@@ -141,7 +168,8 @@ class HidStreamer:
 class LoopbackCapture:
     """WASAPI loopback capture of a speaker via the 'soundcard' library."""
 
-    def __init__(self, device_query, rate=None):
+    def __init__(self, device_query, rate=None, log=print):
+        self.log = log
         self.device_query = device_query
         self.rate = int(rate) if rate else 48000
         self.recorder = None
@@ -151,6 +179,7 @@ class LoopbackCapture:
         self.lock = threading.Lock()
         self.stop_flag = threading.Event()
         self.thread = None
+        self.error = None
 
     def find_speaker(self):
         speakers = sc.all_speakers()
@@ -168,12 +197,12 @@ class LoopbackCapture:
     def open(self):
         speaker = self.find_speaker()
         if speaker is None:
-            print("[audio] no matching output (speaker) device found")
+            self.log("[audio] no matching output (speaker) device found")
             return False
         try:
             self.mic = sc.get_microphone(str(speaker.name), include_loopback=True)
         except Exception as exc:
-            print(f"[audio] cannot open loopback of '{speaker.name}': {exc}")
+            self.log(f"[audio] cannot open loopback of '{speaker.name}': {exc}")
             return False
         spk_channels = getattr(speaker, "channels", 2) or 2
         self.channels = 2 if spk_channels >= 2 else 1
@@ -182,18 +211,19 @@ class LoopbackCapture:
             self.recorder = self.mic.recorder(samplerate=self.rate, channels=self.channels, blocksize=1024)
             self.recorder.__enter__()
         except Exception as exc:
-            print(f"[audio] failed to start loopback recorder: {exc}")
+            self.log(f"[audio] failed to start loopback recorder: {exc}")
             return False
         self.thread = threading.Thread(target=self._run, name="loopback", daemon=True)
         self.thread.start()
-        print(f"[audio] capturing loopback of '{speaker.name}' @ {self.rate} Hz, {self.channels} ch")
+        self.log(f"[audio] capturing loopback of '{speaker.name}' @ {self.rate} Hz, {self.channels} ch")
         return True
 
     def _run(self):
         while not self.stop_flag.is_set():
             try:
                 data = self.recorder.record(numframes=1024)
-            except Exception:
+            except Exception as exc:
+                self.error = exc
                 break
             mono = np.asarray(data, dtype=np.float32)
             if mono.ndim == 2:
@@ -207,6 +237,8 @@ class LoopbackCapture:
                     self.buffer[-n:] = mono
 
     def latest(self, n):
+        if self.error is not None:
+            raise RuntimeError(f"Audio capture stopped: {self.error}")
         with self.lock:
             if len(self.buffer) < n:
                 return None
@@ -247,6 +279,7 @@ class Analyzer:
         self.use_agc = use_agc
         self.peak = 0.25
         self.boost = 1.0
+        self.smooth = np.zeros(bands, dtype=np.float32)
 
     def analyze(self, mono):
         frame = mono[-self.nfft:]
@@ -256,6 +289,7 @@ class Analyzer:
         vals = np.array([spec[idx].mean() for idx in self.bins], dtype=np.float32)
         db = 20.0 * np.log10(vals + 1e-7) + self.tilt
         v = np.clip((db + 66.0) / 60.0, 0.0, 1.0)  # -66..-6 dB -> 0..1
+        v = np.where(v < 0.05, 0.0, v)  # noise gate: hiss must not become bars
 
         if self.use_agc:
             cur = float(np.max(v))
@@ -264,6 +298,14 @@ class Analyzer:
             target_boost = float(np.clip(target_boost, 0.5, 3.5))
             self.boost += (target_boost - self.boost) * 0.04
             v = np.clip(v * self.boost, 0.0, 1.0)
+
+        # temporal smoothing: fast attack, slower release. Raw per-frame FFT
+        # levels jitter frame to frame; sending them unfiltered makes the
+        # bars flicker, so blend rises quickly and falls gently.
+        s = self.smooth
+        alpha = np.where(v > s, 0.60, 0.20)
+        s += (v - s) * alpha
+        v = s
 
         return (v * 235.0).astype(np.uint8)
 
@@ -279,15 +321,17 @@ def parse_args():
     p.add_argument("--tilt", type=float, default=6.0, help="high-frequency tilt in dB (default 6, 0 disables)")
     p.add_argument("--rate", type=int, default=None, help="force capture samplerate")
     p.add_argument("--preview", action="store_true", help="draw band levels in the console")
+    p.add_argument("--tui", action="store_true", help="interactive terminal controls")
     p.add_argument("--dry-run", action="store_true", help="analyze audio but do not open the keyboard")
     p.add_argument("--selftest", action="store_true", help="no audio: stream a synthetic pattern (HID path test)")
+    p.add_argument("--probe", default=None, help="light one LED white to map LED indexes: an index or 'sweep'")
     p.add_argument("--duration", type=float, default=0.0, help="stop after N seconds (0 = run until Ctrl+C)")
     return p.parse_args()
 
 
 def list_devices():
     if sc is None:
-        print("soundcard is not installed; pip install -r requirements.txt")
+        print("soundcard is not installed; run uv sync --locked --project musicviz-host from the repo root")
         return
     speakers = sc.all_speakers()
     default = None
@@ -315,26 +359,58 @@ def main():
         list_devices()
         return 0
 
+    if args.tui:
+        if args.probe:
+            raise SystemExit("Use --probe without --tui")
+        from musicviz_tui import MusicApp
+        MusicApp(args).run()
+        return 0
+    return run_stream(args)
+
+
+def run_stream(args, panel=None):
+    log = panel.log if panel else print
+
     bands_n = max(1, min(args.bands, MAX_BANDS))
     fps = max(10.0, min(args.fps, 120.0))
     period = 1.0 / fps
 
-    hid_streamer = HidStreamer(dry_run=args.dry_run)
+    hid_streamer = HidStreamer(dry_run=args.dry_run, log=log)
     if not hid_streamer.open() and not args.dry_run:
         return 1
+
+    if args.probe is not None:
+        sweep = str(args.probe).lower() == "sweep"
+        idx = 0 if sweep else (int(args.probe) & 0xFF)
+        try:
+            while True:
+                hid_streamer.send_probe(idx)
+                print(f"\r[probe] LED {idx:3d} lit white" + ("  (Ctrl+C to stop)" if not sweep else ""), end="")
+                time.sleep(0.5)
+                if sweep:
+                    idx = (idx + 1) % 70
+        except KeyboardInterrupt:
+            pass
+        finally:
+            hid_streamer.send_probe(0xFF)  # clear
+            print("\n[probe] cleared")
+        return 0
 
     capture = None
     analyzer = None
     if not args.selftest:
         if sc is None:
-            print("soundcard is not installed; pip install -r requirements.txt")
+            log("soundcard is not installed; run uv sync --locked --project musicviz-host from the repo root")
+            hid_streamer.close()
             return 1
-        capture = LoopbackCapture(args.device, args.rate)
+        capture = LoopbackCapture(args.device, args.rate, log=log)
         if not capture.open():
+            capture.close()
+            hid_streamer.close()
             return 1
         analyzer = Analyzer(capture.rate, bands_n, tilt_db=args.tilt, use_agc=not args.no_agc)
     else:
-        print("[selftest] streaming a synthetic band pattern (no audio capture)")
+        log("[selftest] streaming a synthetic band pattern (no audio capture)")
 
     start = time.monotonic()
     next_tick = start
@@ -342,6 +418,8 @@ def main():
     frames = 0
     try:
         while True:
+            if panel and panel.stop.is_set():
+                break
             now = time.monotonic()
             if args.duration and (now - start) >= args.duration:
                 break
@@ -349,6 +427,10 @@ def main():
                 time.sleep(min(next_tick - now, 0.05))
                 continue
             next_tick += period
+            if panel:
+                panel.exchange(hid_streamer, now)
+                if analyzer:
+                    analyzer.use_agc = panel.agc
 
             if args.selftest:
                 t = now - start
@@ -361,19 +443,23 @@ def main():
                     continue  # still filling the ring buffer
                 levels = analyzer.analyze(mono)
 
-            if args.gain != 1.0:
-                levels = np.clip(levels.astype(np.float32) * args.gain, 0, 255).astype(np.uint8)
+            gain = panel.gain if panel else args.gain
+            levels = np.clip(levels.astype(np.float32) * gain, 0, 255).astype(np.uint8)
+            if panel:
+                if panel.paused:
+                    levels[:] = 0
+                panel.levels = levels.copy()
 
             hid_streamer.send(levels[:bands_n])
             frames += 1
 
-            if args.preview:
+            if args.preview and not panel:
                 sys.stdout.write("\r" + preview_line(levels[:bands_n]))
                 sys.stdout.flush()
 
             if now - last_stats >= 2.0:
                 last_stats = now
-                if not args.preview:
+                if not args.preview and not panel:
                     boost = getattr(analyzer, "boost", 1.0) if analyzer else 1.0
                     print(f"[stats] {frames / (now - start):5.1f} fps, boost {boost:.2f}x, max {int(max(levels)):3d}")
     except KeyboardInterrupt:
@@ -384,16 +470,16 @@ def main():
             hid_streamer.send([0] * bands_n)
         except Exception:
             pass
-        if args.preview:
+        if args.preview and not panel:
             sys.stdout.write("\n")
         if capture is not None:
             capture.close()
         hid_streamer.close()
 
     if frames == 0:
-        print("no frames were sent")
+        log("no frames were sent")
         return 1
-    print(f"done - sent {frames} frames")
+    log(f"done - sent {frames} frames")
     return 0
 
 

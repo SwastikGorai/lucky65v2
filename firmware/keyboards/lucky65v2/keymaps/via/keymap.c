@@ -18,15 +18,7 @@ enum layers {
 };
 
 #define RGB_HSV_MAX 7
-static uint8_t rgb_hsvs[7][3] = {
-    {HSV_RED},
-    {HSV_YELLOW},
-    {HSV_GREEN},
-    {HSV_CYAN},
-    {HSV_BLUE},
-    {HSV_PINK},
-    {HSV_WHITE},
-};
+#define rgb_hsvs music_viz_colors
 
 void rgb_matrix_indicators_val_user(void);
 void rgb_matrix_decrease_val_user(void);
@@ -43,14 +35,14 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 
     [_LF] = LAYOUT( /* Base */
         EE_CLR,    KC_MYCM, KC_WHOM, KC_MAIL, KC_CALC, KC_MSEL, KC_MSTP, KC_MPRV, KC_MPLY, KC_MNXT, KC_MUTE, KC_VOLD, KC_VOLU, RGB_TOG, _______,KC_MUTE,
-        TO(_LM),   IM_BT1,  IM_BT2,  IM_BT3,  IM_2G4,  IM_USB, _______,  _______, _______, _______, KC_PSCR, _______, _______, RGB_MOD, MUV_CYC,
+        TO(_LM),   IM_BT1,  IM_BT2,  IM_BT3,  IM_2G4,  IM_USB, _______,  _______, _______, _______, KC_PSCR, _______, _______, RGB_MOD, KC_DEL,
         _______,   _______, _______, _______, _______, _______, KC_SCRL, KC_PAUS, KC_HOME, KC_END,  _______, _______, RGB_HUI,          _______,
         _______,   _______,  _______,  _______,  _______, _______, _______, _______, _______, _______, _______, _______,          RGB_VAI, _______,
         NUM_TOF1,   GU_TOGG, _______,                            IM_BATQ,IM_BATQ,IM_BATQ,                            _______, _______, RGB_SPD, RGB_VAD, RGB_SPI),
 
     [_LS] = LAYOUT( /* Base */
         EE_CLR,    KC_MYCM, KC_WHOM, KC_MAIL, KC_CALC, KC_MSEL, KC_MSTP, KC_MPRV, KC_MPLY, KC_MNXT, KC_MUTE, KC_VOLD, KC_VOLU, RGB_TOG, _______,KC_MUTE,
-        TO(_LM),   IM_BT1,  IM_BT2,  IM_BT3,  IM_2G4,  IM_USB, _______,  _______, _______, _______, KC_PSCR, _______, _______, RGB_MOD, MUV_CYC,
+        TO(_LM),   IM_BT1,  IM_BT2,  IM_BT3,  IM_2G4,  IM_USB, _______,  _______, _______, _______, KC_PSCR, _______, _______, RGB_MOD, KC_DEL,
         _______,   _______, _______, _______, _______, _______, KC_SCRL, KC_PAUS, KC_HOME, KC_END,  _______, _______, RGB_HUI,          _______,
         _______,   _______,  _______,  _______,  _______, _______, _______, _______, _______, _______, _______, _______,          RGB_VAI, _______,
         NUM_TOF1,   GU_TOGG, _______,                            IM_BATQ,IM_BATQ,IM_BATQ,                            _______, _______, RGB_SPD, RGB_VAD, RGB_SPI),
@@ -64,13 +56,13 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 
     [_LMF] = LAYOUT(  /* FN */
         EE_CLR,    KC_BRIU, KC_BRID, _______, _______, _______, _______, KC_MPRV, KC_MPLY, KC_MNXT, KC_MUTE, KC_VOLD, KC_VOLU, RGB_TOG, _______,KC_MUTE,
-        TO(_LB),   IM_BT1,  IM_BT2,  IM_BT3,  IM_2G4,  IM_USB, _______,  _______, _______, _______, KC_PSCR, _______, _______, RGB_MOD, MUV_CYC,
+        TO(_LB),   IM_BT1,  IM_BT2,  IM_BT3,  IM_2G4,  IM_USB, _______,  _______, _______, _______, KC_PSCR, _______, _______, RGB_MOD, KC_DEL,
         _______,   _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, RGB_HUI,          _______,
         _______,   _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______,          RGB_VAI, _______,
         NUM_TOF1,   _______, _______,                            IM_BATQ,IM_BATQ,IM_BATQ,                            _______, _______, RGB_SPD, RGB_VAD, RGB_SPI),
     [_LMS] = LAYOUT(  /* FN */
         EE_CLR,    KC_BRIU, KC_BRID, _______, _______, _______, _______, KC_MPRV, KC_MPLY, KC_MNXT, KC_MUTE, KC_VOLD, KC_VOLU, RGB_TOG, _______,KC_MUTE,
-        TO(_LB),   IM_BT1,  IM_BT2,  IM_BT3,  IM_2G4,  IM_USB, _______,  _______, _______, _______, KC_PSCR, _______, _______, RGB_MOD, MUV_CYC,
+        TO(_LB),   IM_BT1,  IM_BT2,  IM_BT3,  IM_2G4,  IM_USB, _______,  _______, _______, _______, KC_PSCR, _______, _______, RGB_MOD, KC_DEL,
         _______,   _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, RGB_HUI,          _______,
         _______,   _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______,          RGB_VAI, _______,
         NUM_TOF1,   _______, _______,                            IM_BATQ,IM_BATQ,IM_BATQ,                            _______, _______, RGB_SPD, RGB_VAD, RGB_SPI)
@@ -332,6 +324,19 @@ bool im_mm_rgb_blink_hook_user(uint8_t index, mm_linker_rgb_t state) {
 const uint8_t f1_12_keycode[]=
 {KC_F1,KC_F2,KC_F3,KC_F4,KC_F5,KC_F6,KC_F7,KC_F8,KC_F9,KC_F10,KC_F11,KC_F12};
 bool im_process_record_user(uint16_t keycode, keyrecord_t *record) {
+    static bool music_chord_down;
+    if (record->event.key.row == 1 && record->event.key.col == 13) {
+        if (music_chord_down) {
+            if (!record->event.pressed) music_chord_down = false;
+            return false;
+        }
+        if (record->event.pressed && keycode == RGB_MOD && (get_mods() & MOD_BIT(KC_RCTL)) &&
+            (layer_state_is(_LF) || layer_state_is(_LS) || layer_state_is(_LMF) || layer_state_is(_LMS))) {
+            music_chord_down = true;
+            music_viz_next_mode();
+            return false;
+        }
+    }
     switch (keycode) {
     case KC_RIGHT_SHIFT:
     case KC_LEFT_SHIFT:
@@ -438,6 +443,7 @@ bool im_process_record_user(uint16_t keycode, keyrecord_t *record) {
     }break;
     case RGB_HUI:
         if (record->event.pressed) {
+            if (music_viz_cycle_color(false)) return false;
             uint8_t now_mode_one = rgb_matrix_get_mode();
             if((now_mode_one == 6) ||(now_mode_one == 13) ||(now_mode_one == 15) ||(now_mode_one == 16) ||(now_mode_one == 25) ||(now_mode_one == 26) ||(now_mode_one == 34)){
                 confinfo.rgb_hsv_index = (confinfo.rgb_hsv_index + 1) % 6;
@@ -456,6 +462,7 @@ bool im_process_record_user(uint16_t keycode, keyrecord_t *record) {
         break;
     case RGB_HUD:
         if (record->event.pressed) {
+            if (music_viz_cycle_color(true)) return false;
             uint8_t now_mode_one = rgb_matrix_get_mode();
             if((now_mode_one == 6) ||(now_mode_one == 13) ||(now_mode_one == 15) ||(now_mode_one == 16) ||(now_mode_one == 25) ||(now_mode_one == 26) ||(now_mode_one == 34)){
                 (confinfo.rgb_hsv_index == 0)? (confinfo.rgb_hsv_index = 5):(confinfo.rgb_hsv_index = confinfo.rgb_hsv_index - 1);
@@ -576,9 +583,20 @@ bool im_lkey_process_user(uint16_t keycode, bool pressed) {
 
 bool rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max) {
 
-
     if (host_keyboard_led_state().caps_lock) {
-        rgb_matrix_set_color(36, 0xff, 0xff, 0xff);
+        // 36 (the index claimed by the original source's LED map) is the S
+        // LED on retail boards; 38 is the caps LED. Run `musicviz.py
+        // --probe sweep` to verify/adjust if caps still lights wrong.
+        rgb_matrix_set_color(38, 0xff, 0xff, 0xff);
+    }
+
+    // musicviz LED probe: light one LED white (any active RGB effect).
+    {
+        extern uint8_t music_viz_probe_led(void);
+        uint8_t probe = music_viz_probe_led();
+        if (probe != 0xFF) {
+            rgb_matrix_set_color(probe, 0xff, 0xff, 0xff);
+        }
     }
 
     if ((!battery_chrg_flag) && (!full_flag)) {

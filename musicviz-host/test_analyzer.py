@@ -46,7 +46,9 @@ def main():
     # pure tones must land in their own frequency band
     for freq in (100, 1000, 8000):
         a = Analyzer(RATE, MAX_BANDS)
-        lv = a.analyze(tone(freq))
+        lv = None
+        for _ in range(5):  # a few frames so the smoothing settles
+            lv = a.analyze(tone(freq))
         peak_band = int(np.argmax(lv))
         expected = band_for(freq)
         if abs(peak_band - expected) > 1:

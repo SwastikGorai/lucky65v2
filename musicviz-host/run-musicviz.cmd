@@ -1,4 +1,4 @@
 @echo off
 setlocal
 cd /d "%~dp0"
-uv run musicviz.py %*
+uv run --locked musicviz.py %*
