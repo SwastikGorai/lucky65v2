@@ -52,6 +52,23 @@ Enable **Start with Windows** to launch automatically at sign-in.
 | Fn + Right Ctrl + `\` | Switch between music effects |
 | Fn + Enter | Cycle colors, including drift |
 
+## Verify the downloaded files
+
+Checksums for every tracked binary are in [SHA256SUMS](SHA256SUMS). Check them
+before flashing, from the repo root in PowerShell:
+
+```powershell
+Get-Content SHA256SUMS | ForEach-Object {
+    $hash, $path = $_ -split '\s+', 2
+    $actual = (Get-FileHash $path -Algorithm SHA256).Hash.ToLower()
+    "{0}  {1}" -f ($(if ($actual -eq $hash) { 'OK    ' } else { 'FAILED' }), $path)
+}
+```
+
+On Linux or macOS: `sha256sum -c SHA256SUMS`. This detects corruption or
+tampering after publication; it does not prove the firmware matches the source.
+For that, rebuild it (see below) and compare against your own build.
+
 ## Restore stock firmware
 
 The repo **does include** [stock/lucky65v2_via_stock.bin](stock/lucky65v2_via_stock.bin).
